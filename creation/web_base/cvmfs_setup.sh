@@ -60,8 +60,7 @@ dist_file=cvmfsexec-${cvmfs_source}-${os_like}${os_ver}-${arch}
 
 tar -xvzf $cvmfs_utils_dir/utils/cvmfs_distros.tar.gz -C $cvmfs_utils_dir distros/$dist_file
 
-# TODO: Is this file somewhere in the source tree? use: # shellcheck source=./cvmfs_mount.sh
-. $cvmfs_utils_dir/utils/cvmfs_mount.sh	
+perform_cvmfs_mount
 
 if [[ $GWMS_IS_CVMFS -ne 0 ]]; then
     # Error occurred during mount of CVMFS repositories"
