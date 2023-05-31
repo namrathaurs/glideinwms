@@ -217,6 +217,7 @@ gwms_singularity=$(combine_requirements $use_singularity $require_singularity)
 gwms_singularity_ec=$?
 gwms_singularity_status="${gwms_singularity%%,*}"
 gwms_singularity_str="${gwms_singularity#*,}"
+# df -h           # checking if cvmfs repositories are still mounted
 info_dbg "Combining VO ($use_singularity) and entry ($require_singularity): $gwms_singularity_ec, $gwms_singularity_status, $gwms_singularity_str"
 if [[ $gwms_singularity_ec -ne 0  &&  "${gwms_singularity_status}" != FAIL ]]; then
     gwms_singularity_str="Detected inconsistent ec=1/status ${gwms_singularity_status} (${gwms_singularity_str}). Forcing failure."

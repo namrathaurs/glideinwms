@@ -560,7 +560,6 @@ else
     glidein_config=NONE
 fi
 
-
 # TODO: gconfig_add is safe also for periodic scripts. advertise_safe seems not used.
 #  Should it be removed leaving only advertise?
 advertise() {
@@ -988,6 +987,7 @@ cvmfs_path_in_cvmfs() {
     elif [[ -n "$CVMFS_MOUNT_DIR" ]]; then
         local cvmfs_mount="${CVMFS_MOUNT_DIR%/}"
         [[ "$1" = "$cvmfs_mount"  ||  "$1" = "$cvmfs_mount"/* ]]
+        true
     else
         false
     fi
@@ -1279,6 +1279,7 @@ singularity_test_exec() {
     # E.g. if ! singularity_test_exec "$GWMS_SINGULARITY_IMAGE" "$GWMS_SINGULARITY_PATH" ; then
     local singularity_image="${1:-$GWMS_SINGULARITY_IMAGE_DEFAULT}"
     local singularity_bin="${2:-$GWMS_SINGULARITY_PATH_DEFAULT}"
+    
     [[ -z "$singularity_image"  ||  -z "$singularity_bin" ]] &&
             { info "Singularity image or binary empty. Test failed "; false; return; }
     # If verbose, make also Singularity verbose
@@ -1381,6 +1382,7 @@ singularity_test_bin() {
     local sin_full_version
     local sin_type
     local sin_image="$2"
+
     if [[ "$step" = module ]]; then
         local module_name="$sin_binary_name"
         [[ -n "$sin_path" ]] && module_name=$sin_path
@@ -1424,6 +1426,7 @@ singularity_test_bin() {
             return
         fi
     fi
+
     # \n is the separator, _ is to ensure that all lines are counted when parsing, @ used for bread_crumbs quick parse
     echo -e "_$step\n_$sin_type\n_$sin_version\n_$sin_full_version\n_$sin_path\n_@$bread_crumbs"
     # true; return
@@ -1454,7 +1457,7 @@ singularity_locate_bin() {
     #   E HAS_SINGULARITY - set to True if Singularity is found
     #   singularity_in - place where singularity bin was found
 
-    info "Checking for singularity..."
+    info "Checking for singularity"
     #GWMS Entry must use SINGULARITY_BIN to specify the pathname of the singularity binary
     #GWMS, we quote $singularity_bin to deal with white spaces in the path
     local s_step s_location_msg s_location="${1:-OSG}"
@@ -1501,6 +1504,7 @@ singularity_locate_bin() {
         bread_crumbs+=" s_bin_defined"
         s_step=s_bin
         [[ "$s_location" == OSG ]] && { s_location="${osg_singularity_binary%/singularity}"; s_step=s_bin_OSG; }
+
         if [[ ! -d "$s_location"  ||  ! -x "${s_location}/singularity" ]]; then
             [[ "$s_location" = NONE ]] &&
                 warn "SINGULARITY_BIN = NONE is no more a valid value, use GLIDEIN_SINGULARITY_REQUIRE to control the use of Singularity"
@@ -1605,7 +1609,15 @@ singularity_get_image() {
         singularity_image=$(dict_get_val SINGULARITY_IMAGES_DICT default)
         [[ -z "$singularity_image" ]] && singularity_image=$(dict_get_first SINGULARITY_IMAGES_DICT)
     fi
-
+    if [[ -n "$CVMFS_MOUNT_DIR" ]]; then
+        # think about things that are not mounted in ending with cvmfs as path and cater to that than assuming it always ends in cvmfs
+        # set things up here since the path needs to be bindmounted inside the container
+        # working directory is glidein_xxx directory
+        local mount_home=${CVMFS_MOUNT_DIR/\/dist\/cvmfs/}
+        symlink_target=$(readlink $mount_home/dist/${singularity_image#/})
+        symlink_target=${symlink_target#/}
+        singularity_image=$mount_home/dist/$symlink_target
+    fi
     # At this point, GWMS_SINGULARITY_IMAGE is still empty, something is wrong
     if [[ -z "$singularity_image" ]]; then
         [[ -z "$SINGULARITY_IMAGES_DICT" ]] && warn "No Singularity image available (SINGULARITY_IMAGES_DICT is empty)" ||
