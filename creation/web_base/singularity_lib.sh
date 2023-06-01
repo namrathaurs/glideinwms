@@ -988,6 +988,7 @@ cvmfs_path_in_cvmfs() {
     elif [[ -n "$CVMFS_MOUNT_DIR" ]]; then
         local cvmfs_mount="${CVMFS_MOUNT_DIR%/}"
         [[ "$1" = "$cvmfs_mount"  ||  "$1" = "$cvmfs_mount"/* ]]
+        true
     else
         false
     fi
@@ -1604,6 +1605,14 @@ singularity_get_image() {
         # any means that any image is OK, take the 'default' one and if not there the   first one
         singularity_image=$(dict_get_val SINGULARITY_IMAGES_DICT default)
         [[ -z "$singularity_image" ]] && singularity_image=$(dict_get_first SINGULARITY_IMAGES_DICT)
+    fi
+
+    if [[ -n "$CVMFS_MOUNT_DIR" ]]; then
+        # set things up here since the path needs to be bindmounted inside the container
+        local mount_home=${CVMFS_MOUNT_DIR/\/dist\/cvmfs/}
+        symlink_target=$(readlink $mount_home/dist/${singularity_image#/})
+        symlink_target=${symlink_target#/}
+        singularity_image=$mount_home/dist/$symlink_target
     fi
 
     # At this point, GWMS_SINGULARITY_IMAGE is still empty, something is wrong
