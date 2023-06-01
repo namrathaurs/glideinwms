@@ -50,7 +50,7 @@ variables_reset() {
 	GWMS_OS_KRNL_MINOR_REV=
 	GWMS_OS_KRNL_PATCH_NUM=
 
-	# indicates whether CVMFS is locally mounted on the node
+	# indicates whether CVMFS is locally mounted on the worker node (CE)
 	GWMS_IS_CVMFS_LOCAL_MNT=
 	# to indicate the status of on-demand mounting of CVMFS by the glidein after evaluating the worker node
 	GWMS_IS_CVMFS=
@@ -229,15 +229,10 @@ mount_cvmfs_repos () {
         # INPUT(S): 1. CVMFS configuration repository (string); 2. Additional CVMFS
         # repositories (colon-delimited string)
         # RETURN(S): Mounts the defined repositories on the worker node filesystem
-        echo ".... inside mount_cvmfs_repos .... \$1: $1"
-        echo ".... inside mount_cvmfs_repos .... \$2: $2"
         local cvmfsexec_mode=$1
-        local reexec=$2
         local config_repository=$3
         local additional_repos=$4
 
-        # loginfo "glidein_cvmfsexec_dir set to $glidein_cvmfsexec_dir"
-        # loginfo "dist_file set to $dist_file"
         if [[ $cvmfsexec_mode -eq 2 ]]; then
                 "$glidein_cvmfsexec_dir/$dist_file" "$1" -- echo "setting up mount utilities..." &> /dev/null
         fi
@@ -249,15 +244,13 @@ mount_cvmfs_repos () {
         else
                 # mounting the configuration repo (pre-requisite)
                 loginfo "Mounting CVMFS config repo now..."
-                [[ $cvmfsexec_mode -eq 2 ]] && "$glidein_cvmfsexec_dir"/.cvmfsexec/mountrepo "$1"
+                [[ $cvmfsexec_mode -eq 2 ]] && "$glidein_cvmfsexec_dir"/.cvmfsexec/mountrepo "$config_repository"
                 [[ $cvmfsexec_mode -eq 3 ]] && $CVMFSMOUNT "$config_repository"
         fi
 
         # using an array to unpack the names of additional CVMFS repositories
         # from the colon-delimited string
-        # declare -a cvmfs_repos
         repos=($(echo $additional_repos | tr ":" "\n"))
-        #echo ${repos[@]}
 
         loginfo "Mounting additional CVMFS repositories..."
         # mount every repository that was previously unpacked
@@ -294,16 +287,11 @@ mount_cvmfs_repos () {
 
 
 get_mount_point() {
-        # echo "Before the mount_point variable assignment... (in mode 3)"
         # TODO: Verify the findmnt ... will always find the correct CVMFS mount
         mount_point=$(findmnt -t fuse -S /dev/fuse | tail -n 1 | cut -d ' ' -f 1 )
-        # echo "mount_point set to $mount_point"
         if [[ -n "$mount_point" && "$mount_point" != TARGET* ]]; then
                 mount_point=$(dirname "$mount_point")
-                # echo "mount_point is reassigned to $mount_point"
                 if [[ -n "$mount_point" && "$mount_point" != /cvmfs ]]; then
-                        # if [[ -n "$mount_point" ]]; then
-                        # echo "inside the inner if block..."
                         CVMFS_MOUNT_DIR="$mount_point"
                         export CVMFS_MOUNT_DIR=$mount_point
                         gconfig_add CVMFS_MOUNT_DIR "$mount_point"
@@ -522,38 +510,17 @@ perform_cvmfs_mount () {
         # print/display all information pertaining to system checks performed previously (facilitates easy troubleshooting)
         log_all_system_info
 
-        loginfo "CVMFS Source = $cvmfs_source"
-        # initializing CVMFS repositories to a variable for easy modification in the future
-        case $cvmfs_source in
-            osg)
-                GLIDEIN_CVMFS_CONFIG_REPO=config-osg.opensciencegrid.org
-                GLIDEIN_CVMFS_REPOS=singularity.opensciencegrid.org:cms.cern.ch
-                ;;
-            egi)
-                GLIDEIN_CVMFS_CONFIG_REPO=config-egi.egi.eu
-                GLIDEIN_CVMFS_REPOS=config-osg.opensciencegrid.org:singularity.opensciencegrid.org:cms.cern.ch
-                ;;
-            default)
-                GLIDEIN_CVMFS_CONFIG_REPO=cvmfs-config.cern.ch
-                GLIDEIN_CVMFS_REPOS=config-osg.opensciencegrid.org:singularity.opensciencegrid.org:cms.cern.ch
-                ;;
-            *)
-                "$error_gen" -error "$(basename $0)" "WN_Resource" "Invalid factory attribute value specified for CVMFS source."
-                exit 1
-        esac
-        # (optional) set an environment variable that suggests additional repos to be mounted after config repos are mounted
-        loginfo "CVMFS Config Repo = $GLIDEIN_CVMFS_CONFIG_REPO"
-
         # by this point, it would have been established that CVMFS is not locally available
-        # so, install CVMFS via mountrepo or cvmfsexec
+        # so, install CVMFS via mode 1 of cvmfsexec (mountrepo) or mode 3 of cvmfsexec (cvmfsexec)
         loginfo "CVMFS is NOT locally mounted on the worker node! Mounting now..."
         # check the operating system distribution
         #if [[ $GWMS_OS_DISTRO = RHEL ]]; then
-            # evaluate the worker node's system configurations to decide whether CVMFS can be mounted or not
-            loginfo "Evaluating the worker node..."
-            # display operating system information
-            print_os_info
+        # evaluate the worker node's system configurations to decide whether CVMFS can be mounted or not
+        loginfo "Evaluating the worker node..."
+        # display operating system information
+        print_os_info
 
+        local cvmfsexec_mode=$1
         # assess the worker node based on its existing system configurations and perform next steps accordingly
         if evaluate_worker_node_config ; then
             # if evaluation was true, then proceed to mount CVMFS
@@ -564,7 +531,7 @@ perform_cvmfs_mount () {
                 "$error_gen" -ok "$(basename $0)" "msg" "Not trying to install CVMFS."
             else
                 loginfo "Mounting CVMFS repositories..."
-                if mount_cvmfs_repos $GLIDEIN_CVMFS_CONFIG_REPO $GLIDEIN_CVMFS_REPOS ; then
+                if mount_cvmfs_repos $cvmfsexec_mode $GLIDEIN_CVMFS_CONFIG_REPO $GLIDEIN_CVMFS_REPOS ; then
                     :
                 else
                     if [[ $glidein_cvmfs = required ]]; then

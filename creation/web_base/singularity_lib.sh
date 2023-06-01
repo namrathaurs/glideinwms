@@ -988,7 +988,6 @@ cvmfs_path_in_cvmfs() {
     elif [[ -n "$CVMFS_MOUNT_DIR" ]]; then
         local cvmfs_mount="${CVMFS_MOUNT_DIR%/}"
         [[ "$1" = "$cvmfs_mount"  ||  "$1" = "$cvmfs_mount"/* ]]
-        true
     else
         false
     fi
