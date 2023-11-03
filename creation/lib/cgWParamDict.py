@@ -432,7 +432,7 @@ class glideinMainDicts(cgWDictFile.glideinMainDicts):
         for script_name in precvmfs_file_list_scripts:
             self.dicts["precvmfs_file_list"].add_from_file(
                 script_name,
-                cWDictFile.FileDictFile.make_val_tuple(cWConsts.insert_timestr(script_name), "exec"),
+                cWDictFile.FileDictFile.make_val_tuple(cWConsts.insert_timestr(script_name), "exec:r"),
                 os.path.join(cgWConsts.WEB_BASE_DIR, script_name),
             )
         for script_name in at_file_list_scripts:
