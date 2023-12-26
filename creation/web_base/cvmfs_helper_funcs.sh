@@ -425,7 +425,7 @@ has_fuse() {
         fi
     fi
     echo ret_state
-    [[ "$ret_state" == "yes"]]
+    [[ "$ret_state" == "yes" ]]
     return
 }
 
