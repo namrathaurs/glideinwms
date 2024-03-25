@@ -304,8 +304,8 @@ class glideinMainDicts(cgWDictFile.glideinMainDicts):
         )
         self.dicts["untar_cfg"].add(pychirp_tarball, "lib/python/htchirp")
 
-        # Add helper scripts for on-demand cvmfs provisioning, conditional upon the attribute GLIDEIN_USE_CVMFSEXEC
-        # Add cvmfsexec helper script enabled by conditional download
+        # Add helper scripts for on-demand cvmfs provisioning
+        # Add cvmfsexec helper script
         cvmfs_helper = "cvmfs_helper_funcs.sh"
         self.dicts["file_list"].add_from_file(
             cvmfs_helper,
@@ -412,7 +412,7 @@ class glideinMainDicts(cgWDictFile.glideinMainDicts):
             # TODO: This check could be done in the XML, checking if the entries are consistent in the current version
             # fetch the on-demand cvmfs provisioning feature setting
             # if on-demand CVMFS not used at the global level; ignore and continue
-            ondemand_cvmfs = self.dicts["attrs"].get("GLIDEIN_USE_CVMFSEXEC", 0)
+            ondemand_cvmfs = self.dicts["attrs"].get("GLIDEIN_USE_CVMFS", 0)
             # check if on demand cvmfs provisioning is requested/enabled
             if ondemand_cvmfs != 0:
                 # check the dir containing cvmfsexec distros to see if they were built previously
@@ -425,7 +425,7 @@ class glideinMainDicts(cgWDictFile.glideinMainDicts):
                 else:
                     # can be overridden at the entry level, so ignore and [entry supersedes global setting]
                     print(
-                        "...cvmfsexec distributions unavailable but on-demand CVMFS requested via GLIDEIN_USE_CVMFSEXEC; Continuing..."
+                        "...cvmfsexec distributions unavailable but on-demand CVMFS requested via GLIDEIN_USE_CVMFS; Continuing..."
                     )
 
         # add additional system scripts
@@ -731,7 +731,7 @@ class glideinEntryDicts(cgWDictFile.glideinEntryDicts):
         # TODO: This check could be done in the XML, checking if the entries are consistent in the current version
         # fetch the on-demand cvmfs provisioning feature setting
         # if on-demand CVMFS not used by entry, ignore and continue
-        ondemand_cvmfs = self.dicts["attrs"].get("GLIDEIN_USE_CVMFSEXEC", 0)
+        ondemand_cvmfs = self.dicts["attrs"].get("GLIDEIN_USE_CVMFS", 0)
         if ondemand_cvmfs != 0:
             # check the dir containing cvmfsexec distros to see if they were built previously
             if os.path.exists(os.path.join(self.work_dir, "../cvmfsexec/tarballs")) and os.listdir(
@@ -742,7 +742,7 @@ class glideinEntryDicts(cgWDictFile.glideinEntryDicts):
                 print("......RECOMMENDED: Rebuild distributions using the latest version of cvmfsexec.")
             else:
                 print(
-                    "...cvmfsexec distributions unavailable but on-demand CVMFS is requested via GLIDEIN_USE_CVMFSEXEC; Aborting!"
+                    "...cvmfsexec distributions unavailable but on-demand CVMFS is requested via GLIDEIN_USE_CVMFS; Aborting!"
                 )
                 exit(1)
 
