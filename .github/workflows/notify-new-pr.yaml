@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2009 Fermi Research Alliance, LLC
+# SPDX-License-Identifier: Apache-2.0
+
+name: Notify New Pull Request
+on:
+  pull_request:
+    types: opened
+
+jobs:
+  notify_new_pr:
+    runs-on: ubuntu-latest
+    name: A job to notify when a new pull request is opened
+    steps:
+      - name: Echo PR Info
+        shell: bash
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          echo "A new pull request has been opened! $PR_TITLE"
