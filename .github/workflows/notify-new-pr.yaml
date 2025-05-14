@@ -14,5 +14,6 @@ jobs:
       - name: Echo PR Info
         shell: bash
         run: |
+          PR_NUM="${{ github.event.pull_request.number }}"
           PR_TITLE="${{ github.event.pull_request.title }}"
-          echo "A new pull request has been opened! $PR_TITLE"
+          echo "A new pull request has been opened! $PR_NUM: $PR_TITLE"
