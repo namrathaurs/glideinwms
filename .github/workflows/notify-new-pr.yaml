@@ -17,4 +17,4 @@ jobs:
           PR_NUM="${{ github.event.pull_request.number }}"
           PR_TITLE="${{ github.event.pull_request.title }}"
           PR_HTML_URL="${{ github.event.pull_request.html_url }}"
-          echo "A new pull request has been opened! [GWMS#${PR_NUM}](${PR_HREF})"
+          echo "A new pull request has been opened! [GWMS#${PR_TITLE}](${PR_HTML_URL})"
