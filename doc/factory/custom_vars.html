@@ -109,6 +109,9 @@ SPDX-License-Identifier: Apache-2.0
             <a href="#singularity_vars">Apptainer/Singularity variables </a>
           </li>
           <li>
+            <a href="#cvmfs_vars">CVMFS variables </a>
+          </li>
+          <li>
             <a href="#cpuscalculation">Set and discover available CPUs</a>
           </li>
           <li><a href="#lifetime">Lifetime of a glidein</a></li>
@@ -2958,6 +2961,29 @@ MAX_STARTD_LOG          I       10000000        +                               
           glidein. This script is invoked during the customization of the worker
           node as part of the glidein setup.
         </p>
+        <h4>
+          Requirements matrix supporting various modes of cvmfsexec: table in
+          the documentation summarizing the combination of requirements that
+          allows mode 3/mode 1 of cvmfsexec — to help the operators know how to
+          ask for help (redirect them to cvmfsexec repo documentation as well)
+          <table class="attributes">
+            <tr class="head">
+              <td><b>GLIDEIN_USE_CVMFSEXEC</b></td>
+              <td><b>GLIDEIN_CVMFS_REQUIRE</b></td>
+              <td><b>Unprivileged user namespaces?</b></td>
+              <td><b>FUSE/FUSE3 installed?</b></td>
+              <td><b>cvmfsexec mode used?</b></td>
+              <td><b>cvmfsexec utility used? namespaces</b></td>
+            </tr>
+            <tr>
+              <td><b>0</b></td>
+              <td>REQUIRED</td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+          </table>
+        </h4>
       </div>
 
       <div class="section">
