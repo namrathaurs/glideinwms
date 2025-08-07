@@ -2838,7 +2838,7 @@ MAX_STARTD_LOG          I       10000000        +                               
       </div>
 
       <div class="section">
-        <h3><a name="cvmfs_vars"></a>CVMFS Variables</h3>
+        <h2><a name="cvmfs_vars"></a>CVMFS Variables</h2>
         <p>
           This section describes the variables that can be configured for use
           with the glidein to allow CVMFS to be provisioned on-demand. These
@@ -2961,11 +2961,12 @@ MAX_STARTD_LOG          I       10000000        +                               
           glidein. This script is invoked during the customization of the worker
           node as part of the glidein setup.
         </p>
-        <h4>
-          Requirements matrix for various modes of cvmfsexec: table in the
-          documentation summarizing the combination of requirements that allows
-          mode 3/mode 1 of cvmfsexec — to help the operators know how to ask for
-          help (redirect them to cvmfsexec repo documentation as well)
+        <h3>
+          Following is a matrix summarizing the combination of requirements that
+          allow different modes of cvmfsexec. For more technical details on how
+          unprivileged user namespaces and FUSE dictate the mode of cvmfsexec
+          that will be used, please refer to cvmfsexec documentation
+          <a href="https://www.github.com/cvmfs/cvmfsexec">here</a>.
           <table class="requirements">
             <tr class="head">
               <td><b>GLIDEIN_USE_CVMFSEXEC</b></td>
@@ -3025,7 +3026,7 @@ MAX_STARTD_LOG          I       10000000        +                               
               <td>-</td>
             </tr>
           </table>
-        </h4>
+        </h3>
       </div>
 
       <div class="section">
