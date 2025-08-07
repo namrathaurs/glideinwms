@@ -2962,25 +2962,67 @@ MAX_STARTD_LOG          I       10000000        +                               
           node as part of the glidein setup.
         </p>
         <h4>
-          Requirements matrix supporting various modes of cvmfsexec: table in
-          the documentation summarizing the combination of requirements that
-          allows mode 3/mode 1 of cvmfsexec — to help the operators know how to
-          ask for help (redirect them to cvmfsexec repo documentation as well)
+          Requirements matrix for various modes of cvmfsexec: table in the
+          documentation summarizing the combination of requirements that allows
+          mode 3/mode 1 of cvmfsexec — to help the operators know how to ask for
+          help (redirect them to cvmfsexec repo documentation as well)
           <table class="attributes">
             <tr class="head">
               <td><b>GLIDEIN_USE_CVMFSEXEC</b></td>
-              <td><b>GLIDEIN_CVMFS_REQUIRE</b></td>
+              <td><b>GLIDEIN_CVMFS</b></td>
               <td><b>Unprivileged user namespaces?</b></td>
               <td><b>FUSE/FUSE3 installed?</b></td>
-              <td><b>cvmfsexec mode used?</b></td>
-              <td><b>cvmfsexec utility used? namespaces</b></td>
+              <td><b>cvmfsexec mode used</b></td>
+              <td><b>Utility used?</b></td>
             </tr>
             <tr>
               <td><b>0</b></td>
-              <td>REQUIRED</td>
-              <td></td>
-              <td></td>
-              <td></td>
+              <td>NEVER|PREFERRED|OPTIONAL|REQUIRED</td>
+              <td>NA</td>
+              <td>NA</td>
+              <td>NA</td>
+              <td>NA</td>
+            </tr>
+            <tr>
+              <td><b>1</b></td>
+              <td>NEVER</td>
+              <td>NA</td>
+              <td>NA</td>
+              <td>NA</td>
+              <td>NA</td>
+            </tr>
+            <tr>
+              <td rowspan="2">1</td>
+              <td rowspan="2">PREFERRED|OPTIONAL</td>
+              <td>no</td>
+              <td>yes</td>
+              <td>1</td>
+              <td>mountrepo</td>
+            </tr>
+            <tr>
+              <td>yes</td>
+              <td>NA</td>
+              <td>3</td>
+              <td>cvmfsexec</td>
+            </tr>
+            <tr>
+              <td rowspan="2">1</td>
+              <td rowspan="2">REQUIRED</td>
+              <td>yes</td>
+              <td>NA</td>
+              <td>3</td>
+              <td>cvmfsexec</td>
+            </tr>
+            <tr>
+              <td rowspan="2">no</td>
+              <td>yes</td>
+              <td>1</td>
+              <td>mountrepo</td>
+            </tr>
+            <tr>
+              <td>no</td>
+              <td>-</td>
+              <td>-</td>
             </tr>
           </table>
         </h4>
