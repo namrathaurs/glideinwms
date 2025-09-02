@@ -30,6 +30,12 @@ add_config_line_source=$(grep -m1 '^ADD_CONFIG_LINE_SOURCE ' "$glidein_config" |
 error_gen=$(gconfig_get ERROR_GEN_PATH "$glidein_config")
 # get the cvmfsexec attribute switch value from the config file
 use_cvmfs=$(gconfig_get GLIDEIN_USE_CVMFS "$glidein_config")
+if [[ -z $use_cvmfs ]]; then
+    loginfo "CVMFS not requested (GLIDEIN_USE_CVMFS not used); skipping CVMFS cleanup."
+    "$error_gen" -ok "$(basename $0)" "mnt_msg1" "CVMFS not requested; skipping CVMFS cleanup."
+    return 0
+fi
+# if on demand CVMFS was requested, then do the following
 # get the glidein work directory location from glidein_config file
 work_dir=$(gconfig_get GLIDEIN_WORK_DIR "$glidein_config")
 # $PWD=/tmp/glide_xxx and every path is referenced with respect to $PWD
@@ -37,33 +43,38 @@ work_dir=$(gconfig_get GLIDEIN_WORK_DIR "$glidein_config")
 # source the helper script
 # shellcheck source=./cvmfs_helper_funcs.sh
 . "$work_dir"/cvmfs_helper_funcs.sh
-
-# first check if CVMFS is locally mounted on the worker node
-detect_local_cvmfs
-if [[ $GWMS_IS_CVMFS_LOCAL_MNT -eq 0 ]]; then
-    # CVMFS is mounted locally in the filesystem; DO NOT UNMOUNT!
-    loginfo "Skipping unmounting of CVMFS as it already is locally provisioned in the node!"
-    "$error_gen" -ok "$(basename $0)" "umnt_msg2" "CVMFS is locally mounted on the node; skipping cleanup."
-    exit 0
-fi
-# if not, CVMFS was mounted on-demand, so unmount based on the cvmfsexec mode
-is_cvmfs_mntd=$(gconfig_get GWMS_IS_CVMFS "$glidein_config")
-if [[ -z "${is_cvmfs_mntd}" || $is_cvmfs_mntd -ne 0  ]]; then
-    loginfo "CVMFS was not found mounted, skipping CVMFS cleanup..."
-    exit 0
-fi
-# if is_cvmfs_mntd is 0, then do the following
-loginfo "Found CVMFS that has been mounted on demand..."
 # check which mode was used to mount CVMFS on demand
+gwms_cvmfsexec_mode=$(gconfig_get GWMS_CVMFSEXEC_MODE "$glidein_config")
+# check if CVMFS was mounted on demand
+ondemand_cvmfs_mntd=$(gconfig_get GWMS_IS_CVMFS "$glidein_config")2
+# if [[ -z $ondemand_cvmfs_mntd || $ondemand_cvmfs_mntd -ne 0 ]]; then
+if [[ -z $ondemand_cvmfs_mntd ]]; then
+    # CVMFS might be mounted locally in the filesystem; DO NOT UNMOUNT!
+    loginfo "Skipping unmounting of CVMFS as it may be locally provisioned in the node!"
+    "$error_gen" -ok "$(basename $0)" "umnt_msg2" "CVMFS might be locally mounted on the node; skipping CVMFS cleanup."
+    exit 0
+fi
+# # first check if CVMFS is locally mounted on the worker node
+# detect_local_cvmfs
+# if [[ $GWMS_IS_CVMFS_LOCAL_MNT -eq 0 ]]; then
+#     # CVMFS is mounted locally in the filesystem; DO NOT UNMOUNT!
+#     loginfo "Skipping unmounting of CVMFS as it already is locally provisioned in the node!"
+#     "$error_gen" -ok "$(basename $0)" "umnt_msg2" "CVMFS is locally mounted on the node; skipping cleanup."
+#     exit 0
+# fi
+# if not, CVMFS was mounted on-demand, so unmount based on the cvmfsexec mode
+# get info about the mode that was used to mount CVMFS on demand
 gwms_cvmfsexec_mode=$(gconfig_get GWMS_CVMFSEXEC_MODE "$glidein_config")
 # get the cvmfsexec directory location
 glidein_cvmfsexec_dir=$(gconfig_get CVMFSEXEC_DIR "$glidein_config")
-loginfo "Unmounting CVMFS provisioned by the glidein..."
+loginfo "Found CVMFS mounted on demand using mode $gwms_cvmfsexec_mode..."
+loginfo "Starting to unmount CVMFS provisioned by the glidein..."
 mnt_dir=$(gconfig_get CVMFS_MOUNT_DIR "$glidein_config")
 [[ -n "$CVMFS_MOUNT_DIR" ]] && loginfo "CVMFS_MOUNT_DIR set to $CVMFS_MOUNT_DIR"
 if [[ $gwms_cvmfsexec_mode -eq 1 ]]; then
     "$glidein_cvmfsexec_dir"/.cvmfsexec/umountrepo -a
 elif [[ $gwms_cvmfsexec_mode -eq 3  || $gwms_cvmfsexec_mode -eq 2 ]]; then
+    [[ -z "$CVMFSMOUNT" ]] && false || true
     repos=($(echo $GLIDEIN_CVMFS_REPOS | tr ":" "\n"))
     loginfo "Unmounting CVMFS repositories..."
     # mount every repository that was previously unpacked
@@ -80,7 +91,7 @@ if [[ -n "$CVMFS_MOUNT_DIR" ]]; then
     export CVMFS_MOUNT_DIR
     gconfig_add CVMFS_MOUNT_DIR ""
 fi
-cat /proc/$$/mounts | grep /dev/fuse
+
 # check again to ensure all CVMFS repositories were unmounted by umountrepo
 # searching for "/dev/fuse" since "/cvmfs" might return false positives (/etc/auto.fs/cvmfs line)
 cat /proc/$$/mounts | grep /dev/fuse &> /dev/null && logerror "One or more CVMFS repositories might not be completely unmounted" || loginfo "CVMFS repositories unmounted"
