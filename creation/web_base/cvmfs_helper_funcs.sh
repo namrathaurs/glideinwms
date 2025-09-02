@@ -621,7 +621,9 @@ perform_cvmfs_mount () {
     return 0
 }
 
-glidein_config="$1"
+if [[ -z "$gwms_cvmfs_reexec" ]]; then
+    glidein_config="$1"
+fi
 
 # import add_config_line function
 add_config_line_source=$(grep -m1 '^ADD_CONFIG_LINE_SOURCE ' "$glidein_config" | cut -d ' ' -f 2-)

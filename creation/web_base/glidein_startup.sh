@@ -2148,7 +2148,7 @@ if [[ -n "$gwms_cvmfs_reexec" && "$gwms_cvmfs_reexec" == "yes" ]]; then
     # re-source all the scripts as it'd have been done during the first invocation of this script
     extract_all_data
 
-    log_setup "${glidein_config}"
+    glog_setup "${glidein_config}"
 fi
 
 glidein_debug_options=$(gconfig_get GLIDEIN_DEBUG_OPTIONS "$glidein_config")
