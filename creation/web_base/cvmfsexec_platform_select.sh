@@ -27,7 +27,7 @@ use_cvmfs=$(gconfig_get GLIDEIN_USE_CVMFSEXEC "$glidein_config")
 #use_cvmfs=${use_cvmfs,,}
 
 cvmfs_require=$(gconfig_get GLIDEIN_CVMFS_REQUIRE "$glidein_config")
-cvmfs_require=${glidein_cvmfs_require,,}
+cvmfs_require=${cvmfs_require,,}
 if [[ $use_cvmfs -ne 1 && $cvmfs_require == "never" ]]; then
     "$error_gen" -ok "$(basename $0)" "msg" "On-demand CVMFS not requested; skipping selection of platform-based cvmfsexec distribution."
     exit 0
