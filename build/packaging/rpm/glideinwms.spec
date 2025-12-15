@@ -264,6 +264,7 @@ Requires: python3 >= %{python_min_version}
 # This is in py3 std library - Requires: python-argparse
 # Is this the same? Requires: python36-configargparse
 Requires: javascriptrrd >= 1.1.0
+Requires: cpio >= 2.13
 Requires: initscripts
 Requires: python3-m2crypto
 Requires: python3-requests
