@@ -238,6 +238,19 @@ class glideinMainDicts(cgWDictFile.glideinMainDicts):
             self.dicts["params"].add("GLIDEIN_Factory_Collector", str(factory_monitoring_collector))
         populate_gridmap(self.conf, self.dicts["gridmap"])
 
+        # initialize an empty dictionary to capture all the feature flags defined in the configuration
+        feature_flags = {}
+        # put user attributes into config files
+        for attr in self.conf.get_child_list("attrs"):
+            # check if the global-level attribute is a feature flag
+            if attr["name"].startswith("GLIDEIN_FEATURE_") and attr.get_val() != "False":
+                attr_name = attr["name"].split("_", 2)[2].lower()
+                # converting the attribute value to lowercase since it is a string (not bool)
+                feature_flags[attr_name] = attr.get_val()
+            # ignore attributes that need expansion in the global section
+            if str(attr.get_val()).find("$") == -1 or not self.enable_expansion:  # does not need to be expanded
+                add_attr_unparsed(attr, self.dicts, "main")
+
         # the following list will be a megalist containing all the scripts; used for duplication check logic subsequently
         all_scripts = []
         # NOTE that all the files in these _scripts lists are added as executables (i.e. must report with error_gen)
@@ -320,28 +333,6 @@ class glideinMainDicts(cgWDictFile.glideinMainDicts):
         )
         self.dicts["untar_cfg"].add(pychirp_tarball, "lib/python/htchirp")
 
-        ### Add helper script for on-demand cvmfs provisioning
-        cvmfs_helper = "cvmfs_helper_funcs.sh"
-        self.dicts["file_list"].add_from_file(
-            cvmfs_helper,
-            cWDictFile.FileDictFile.make_val_tuple(
-                cWConsts.insert_timestr(cvmfs_helper),
-                "exec",
-            ),
-            os.path.join(cgWConsts.WEB_BASE_DIR, cvmfs_helper),
-        )
-
-        ### Add helper script for dynamic selection of cvmfsexec distribution
-        dist_select_script = "cvmfsexec_platform_select.sh"
-        self.dicts["file_list"].add_from_file(
-            dist_select_script,
-            cWDictFile.FileDictFile.make_val_tuple(
-                cWConsts.insert_timestr(dist_select_script),
-                "exec",
-            ),
-            os.path.join(cgWConsts.WEB_BASE_DIR, dist_select_script),
-        )
-
         # make sure condor_startup does not get executed ahead of time under normal circumstances
         # but must be loaded early, as it also works as a reporting script in case of error
         self.dicts["description"].add(cgWConsts.CONDOR_STARTUP_FILE, "last_script")
@@ -353,12 +344,6 @@ class glideinMainDicts(cgWDictFile.glideinMainDicts):
         for file in self.conf.get_child_list("files"):
             add_file_unparsed(file, self.dicts, True)
 
-        # put user attributes into config files
-        for attr in self.conf.get_child_list("attrs"):
-            # ignore attributes that need expansion in the global section
-            if str(attr.get_val()).find("$") == -1 or not self.enable_expansion:  # does not need to be expanded
-                add_attr_unparsed(attr, self.dicts, "main")
-
         # Add global submit_attrs into the main dict (and their config file)
         submit_attrs = []
         try:
@@ -368,6 +353,31 @@ class glideinMainDicts(cgWDictFile.glideinMainDicts):
         for attr in submit_attrs:
             # TODO: attribute expansion is not considered for submit_attrs
             add_submit_attr_unparsed(attr, self.dicts, "main", "main")
+
+        ## Add helper script for on-demand cvmfs provisioning
+        cvmfs_helper = "cvmfs_helper_funcs.sh"
+        # check feature flag to decide on the version of `cvmfs_helper_funcs.sh` to be used. if feature flag for cvmfsexec is enabled, `cvmfs_helper_funcs_ff.sh` should be used. if feature flag for cvmfsexec is disabled/not defined, `cvmfs_helper_funcs.sh` should be used
+        if "cvmfsexec" in feature_flags:
+            cvmfs_helper = "cvmfs_helper_funcs_ff.sh"
+        self.dicts["file_list"].add_from_file(
+            cvmfs_helper,
+            cWDictFile.FileDictFile.make_val_tuple(
+                cWConsts.insert_timestr(cvmfs_helper),
+                "exec",
+            ),
+            os.path.join(cgWConsts.WEB_BASE_DIR, cvmfs_helper),
+        )
+
+        # Add helper script for dynamic selection of cvmfsexec distribution
+        dist_select_script = "cvmfsexec_platform_select.sh"
+        self.dicts["file_list"].add_from_file(
+            dist_select_script,
+            cWDictFile.FileDictFile.make_val_tuple(
+                cWConsts.insert_timestr(dist_select_script),
+                "exec",
+            ),
+            os.path.join(cgWConsts.WEB_BASE_DIR, dist_select_script),
+        )
 
         # Check if cvmfsexec distributions need to be built/rebuilt
         populate_cvmfsexec_build_config(self.dicts["build_cvmfsexec"], self.conf)
@@ -444,7 +454,10 @@ class glideinMainDicts(cgWDictFile.glideinMainDicts):
                     )
 
         # add additional system scripts
+        # check feature flag to decide on the version of cvmfs_setup.sh to be used. if feature flag for cvmfsexec is enabled, `cvmfs_setup_ff.sh` should be used. if feature flag for cvmfsexec is disabled/not defined, `cvmfs_setup.sh` should be used
         for script_name in precvmfs_file_list_scripts:
+            if script_name == "cvmfs_setup.sh" and "cvmfsexec" in feature_flags:
+                script_name = "cvmfs_setup_ff.sh"
             self.dicts["precvmfs_file_list"].add_from_file(
                 script_name,
                 cWDictFile.FileDictFile.make_val_tuple(cWConsts.insert_timestr(script_name), "exec"),
@@ -457,6 +470,8 @@ class glideinMainDicts(cgWDictFile.glideinMainDicts):
                 os.path.join(cgWConsts.WEB_BASE_DIR, script_name),
             )
         for script_name in after_file_list_scripts:
+            if script_name == "cvmfs_umount.sh" and "cvmfsexec" in feature_flags:
+                script_name = "cvmfs_umount_ff.sh"
             self.dicts["after_file_list"].add_from_file(
                 script_name,
                 cWDictFile.FileDictFile.make_val_tuple(cWConsts.insert_timestr(script_name), "exec"),
@@ -743,6 +758,15 @@ class glideinEntryDicts(cgWDictFile.glideinEntryDicts):
         for attr in entry_attrs:
             add_attr_unparsed(attr, self.dicts, self.sub_name)
 
+        # initialize an empty dictionary to capture all the feature flags defined in the global configuration
+        feature_flags = {}
+        # check if the attribute is a feature flag
+        for attr in self.conf.get_child_list("attrs"):
+            if attr["name"].startswith("GLIDEIN_FEATURE_") and attr.get_val() != "False":
+                attr_name = attr["name"].split("_", 2)[2].lower()
+                # converting the attribute value to lowercase since it is a string (not bool)
+                feature_flags[attr_name] = attr.get_val()
+
         # TODO: This check could be done in the XML, checking if the entries are consistent in the current version
         # fetch the on-demand cvmfs provisioning feature setting
         # if on-demand CVMFS not used by entry, ignore and continue
@@ -842,6 +866,10 @@ class glideinEntryDicts(cgWDictFile.glideinEntryDicts):
             self.enable_expansion,
         )
 
+        startup_file = cgWConsts.STARTUP_FILE
+        if "cvmfsexec" in feature_flags:
+            startup_file = cgWConsts.STARTUP_FILE_FF
+
         # Now that we have the EntrySet fill the condor_jdl for its entries
         if isinstance(entry, factoryXmlConfig.EntrySetElement):
             for subentry in entry.get_child_list("entries"):
@@ -850,7 +878,7 @@ class glideinEntryDicts(cgWDictFile.glideinEntryDicts):
                 for cj in self.dicts["condor_jdl"]:
                     cj_entryname = cj.fname.split(".")[1]
                     if cj_entryname == subentry.getName():
-                        cj.populate(cgWConsts.STARTUP_FILE, self.sub_name, self.conf, entry)
+                        cj.populate(startup_file, self.sub_name, self.conf, entry)
                         break
                 entry.select(None)
         else:
@@ -867,7 +895,7 @@ class glideinEntryDicts(cgWDictFile.glideinEntryDicts):
             # increasing parameter list for this function, lets just pass params, sub_params, and the 2 other parameters
             # to the function and call it a day.
             ################################################################################################################
-            self.dicts["condor_jdl"][0].populate(cgWConsts.STARTUP_FILE, self.sub_name, self.conf, entry)
+            self.dicts["condor_jdl"][0].populate(startup_file, self.sub_name, self.conf, entry)
 
     # reuse as much of the other as possible
     def reuse(self, other):  # other must be of the same class
