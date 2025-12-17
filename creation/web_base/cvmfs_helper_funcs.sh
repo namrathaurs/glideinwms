@@ -68,30 +68,30 @@ variables_reset() {
 
 
 loginfo() {
-    # Prints informational messages to STDOUT along with hostname and date/time.
+    # Prints informational messages to STDERR along with hostname and date/time.
     #
     # INPUT(S): String containing the message
-    # RETURN(S): Prints message to STDOUT
+    # RETURN(S): Prints message to STDERR
 
     echo -e "$(date +%m-%d-%Y\ %T\ %Z) \t INFO: $1" >&2
 }
 
 
 logwarn(){
-    # Prints warning messages to STDOUT along with hostname and date/time.
+    # Prints warning messages to STDERR along with hostname and date/time.
     #
     # INPUT(S): String containing the message
-    # RETURN(S): Prints message to STDOUT
+    # RETURN(S): Prints message to STDERR
 
     echo -e "$(date +%m-%d-%Y\ %T\ %Z) \t WARNING: $1" >&2
 }
 
 
 logerror() {
-    # Prints error messages to STDOUT along with hostname and date/time.
+    # Prints error messages to STDERR along with hostname and date/time.
     #
     # INPUT(S): String containing the message
-    # RETURN(S): Prints message to STDOUT
+    # RETURN(S): Prints message to STDERR
 
     echo -e "$(date +%m-%d-%Y\ %T\ %Z) \t ERROR: $1" >&2
 }
@@ -105,6 +105,7 @@ print_exit_status () {
 
     [[ $1 -eq 0 ]] && echo yes || echo no
 }
+
 
 detect_local_cvmfs() {
     # Detects whether CVMFS is natively (aka locally) available on the worker node. The result is stored in a common variable, i.e GWMS_IS_CVMFS_LOCAL_MNT, and can be used downstream.
@@ -125,6 +126,7 @@ detect_local_cvmfs() {
 
     loginfo "Worker node has native CVMFS: $(print_exit_status $GWMS_IS_CVMFS_LOCAL_MNT)"
 }
+
 
 perform_system_check() {
     # Performs required system checks (such as operating system and kernel info, unprivileged user namespaces, FUSE status) and stores the results in the common variables for later use.
@@ -492,10 +494,10 @@ determine_cvmfsexec_mode_usage() {
         echo 1
         return 0
     fi
-    if [[ $fuse_config_status == no ]]; then
+    if [[ "${fuse_config_status}" == "no" ]]; then
         # failure;
         logerror "CVMFS cannot be mounted on the worker node using mountrepo utility"
-    elif [[ $fuse_config_status == error ]]; then
+    elif [[ "${fuse_config_status}" == "error" ]]; then
         # inconsistent system configurations detected in the worker node
         logerror "Detected inconsistent configurations on the worker node. mountrepo utility cannot be used!!"
     fi
@@ -641,16 +643,29 @@ perform_cvmfs_mount () {
     return 0
 }
 
-if [[ -z "$gwms_cvmfs_reexec" ]]; then
-    glidein_config="$1"
+
+############################################################
+#
+# Main
+#
+############################################################
+
+_main() {
+    if [[ -z "$gwms_cvmfs_reexec" ]]; then
+        glidein_config="$1"
+    fi
+
+    # import add_config_line function
+    add_config_line_source=$(grep -m1 '^ADD_CONFIG_LINE_SOURCE ' "$glidein_config" | cut -d ' ' -f 2-)
+    # shellcheck source=./add_config_line.source
+    . "$add_config_line_source"
+
+    # adding system information about unprivileged user namespaces to the glidein classad
+    gconfig_add "HAS_UNPRIVILEGED_USER_NAMESPACES" "$(has_unpriv_userns)"
+    condor_vars_file=$(gconfig_get CONDOR_VARS_FILE "${glidein_config}" "-i")
+    add_condor_vars_line "HAS_UNPRIVILEGED_USER_NAMESPACES" "S" "-" "+" "Y" "Y" "+"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    _main "$@"
 fi
-
-# import add_config_line function
-add_config_line_source=$(grep -m1 '^ADD_CONFIG_LINE_SOURCE ' "$glidein_config" | cut -d ' ' -f 2-)
-# shellcheck source=./add_config_line.source
-. "$add_config_line_source"
-
-# adding system information about unprivileged user namespaces to the glidein classad
-gconfig_add "HAS_UNPRIVILEGED_USER_NAMESPACES" "$(has_unpriv_userns)"
-condor_vars_file=$(gconfig_get CONDOR_VARS_FILE "${glidein_config}" "-i")
-add_condor_vars_line "HAS_UNPRIVILEGED_USER_NAMESPACES" "S" "-" "+" "Y" "Y" "+"
