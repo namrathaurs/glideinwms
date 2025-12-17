@@ -19,11 +19,6 @@
 # Author:
 #       Namratha Urs
 #
-# Version:
-#       1.0
-#
-
-echo "Unmounting CVMFS as part of glidein cleanup..."
 
 glidein_config=$1
 
@@ -31,65 +26,84 @@ glidein_config=$1
 add_config_line_source=$(grep -m1 '^ADD_CONFIG_LINE_SOURCE ' "$glidein_config" | awk '{print $2}')
 # shellcheck source=./add_config_line.source
 . "$add_config_line_source"
-
 # import error_gen
 error_gen=$(gconfig_get ERROR_GEN_PATH "$glidein_config")
 
-# get the cvmfsexec attribute switch value from the config file
-use_cvmfsexec=$(gconfig_get GLIDEIN_USE_CVMFSEXEC "$glidein_config")
-# TODO: int or string? if string, make the attribute value case insensitive
-#use_cvmfsexec=${use_cvmfsexec,,}
-
-if [[ $use_cvmfsexec -ne 1 ]]; then
-    "$error_gen" -ok "$(basename $0)" "umnt_msg1" "Not using cvmfsexec; skipping cleanup."
-    exit 0
-fi
-
+# if on demand CVMFS was requested, then do the following
 # get the glidein work directory location from glidein_config file
 work_dir=$(gconfig_get GLIDEIN_WORK_DIR "$glidein_config")
 # $PWD=/tmp/glide_xxx and every path is referenced with respect to $PWD
-
 # source the helper script
-# TODO: Is this file somewhere in the source tree? use: # shellcheck source=./cvmfs_helper_funcs.sh
-. $work_dir/cvmfs_helper_funcs.sh
+# shellcheck source=./cvmfs_helper_funcs.sh
+. "$work_dir"/cvmfs_helper_funcs.sh
 
-# get the cvmfsexec directory location
-glidein_cvmfsexec_dir=$(gconfig_get CVMFSEXEC_DIR "$glidein_config")
-
-########################################################################################################
-# Start: main program
-########################################################################################################
-
-loginfo "..."
-loginfo  "Start log for unmounting CVMFS"
-
-# check if CVMFS is locally mounted on the worker node
-detect_local_cvmfs
-
-if [[ $GWMS_IS_CVMFS_MNT -eq 0 ]]; then
-    # CVMFS is mounted locally in the filesystem; DO NOT UNMOUNT!
-    loginfo "Skipping unmounting of CVMFS as it already is locally provisioned in the node!"
-    "$error_gen" -ok "$(basename $0)" "umnt_msg2" "CVMFS is locally mounted on the node; skipping cleanup."
+# get the cvmfsexec attribute switch value from the config file
+use_cvmfs=$(gconfig_get GLIDEIN_USE_CVMFS "$glidein_config")
+if [[ -z $use_cvmfs ]]; then
+    loginfo "CVMFS not requested (GLIDEIN_USE_CVMFS not used); skipping CVMFS cleanup."
+    "$error_gen" -ok "$(basename $0)" "mnt_msg1" "CVMFS not requested; skipping CVMFS cleanup."
     exit 0
 fi
 
-loginfo "Unmounting CVMFS mounted by the glidein..."
-$glidein_cvmfsexec_dir/.cvmfsexec/umountrepo -a
+# check if CVMFS was mounted on demand
+ondemand_cvmfs_mntd=$(gconfig_get GWMS_IS_CVMFS "$glidein_config")
+# if [[ -z $ondemand_cvmfs_mntd || $ondemand_cvmfs_mntd -ne 0 ]]; then
+if [[ -z $ondemand_cvmfs_mntd ]]; then
+    # first check if CVMFS is locally mounted on the worker node
+    detect_local_cvmfs
+    if [[ $GWMS_IS_CVMFS_LOCAL_MNT -eq 0 ]]; then
+        # CVMFS is mounted locally in the filesystem; DO NOT UNMOUNT!
+	loginfo "Skipping unmounting of CVMFS as it already is locally provisioned in the node!"
+	"$error_gen" -ok "$(basename $0)" "umnt_msg2" "CVMFS is locally mounted on the node; skipping cleanup."
+	exit 0
+    fi
+    # CVMFS might be mounted locally in the filesystem; DO NOT UNMOUNT!
+    #loginfo "Skipping unmounting of CVMFS as it may be locally provisioned in the node!"
+    #"$error_gen" -ok "$(basename $0)" "umnt_msg2" "CVMFS might be locally mounted on the node; skipping CVMFS cleanup."
+    #exit 0
+fi
 
-if [[ -n "$CVMFS_MOUNT_DIR" ]]; then
+# if not, CVMFS was mounted on-demand, so unmount based on the cvmfsexec mode
+# get info about the mode that was used to mount CVMFS on demand
+gwms_cvmfsexec_mode=$(gconfig_get GWMS_CVMFSEXEC_MODE "$glidein_config")
+# get the cvmfsexec directory location
+glidein_cvmfsexec_dir=$(gconfig_get CVMFSEXEC_DIR "$glidein_config")
+loginfo "Found CVMFS mounted on demand using mode $gwms_cvmfsexec_mode..."
+loginfo "Starting to unmount CVMFS provisioned by the glidein..."
+mnt_dir=$(gconfig_get CVMFS_MOUNT_DIR "$glidein_config")
+[[ -n "$mnt_dir" ]] && loginfo "CVMFS_MOUNT_DIR set to $mnt_dir"
+if [[ $gwms_cvmfsexec_mode -eq 1 ]]; then
+    "$glidein_cvmfsexec_dir"/.cvmfsexec/umountrepo -a
+    # mode 1 uses /dev/fuse as SOURCE
+    search_pattern="/dev/fuse"
+elif [[ $gwms_cvmfsexec_mode -eq 3  || $gwms_cvmfsexec_mode -eq 2 ]]; then
+    [[ -z "$CVMFSMOUNT" ]] && false || true
+    repos=($(echo $GLIDEIN_CVMFS_REPOS | tr ":" "\n"))
+    loginfo "Unmounting CVMFS repositories..."
+    # mount every repository that was previously unpacked
+    for repo in "${repos[@]}"
+    do
+        $CVMFSUMOUNT "$repo"
+    done
+    loginfo "Unmounting CVMFS config repo now..."
+    $CVMFSUMOUNT "${GLIDEIN_CVMFS_CONFIG_REPO}"
+    # mode 3 uses cvmfs2 as SOURCE
+    search_pattern="cvmfs2"
+fi
+# clear the mount_dir variable if it was set during the mounting of CVMFS regardless of the mode
+if [[ -n "$mnt_dir" ]]; then
     CVMFS_MOUNT_DIR=
     export CVMFS_MOUNT_DIR
     gconfig_add CVMFS_MOUNT_DIR ""
 fi
 
 # check again to ensure all CVMFS repositories were unmounted by umountrepo
-# searching for "/dev/fuse" since "/cvmfs" returns false positives (/etc/auto.fs /cvmfs line)
-cat /proc/$$/mounts | grep /dev/fuse &> /dev/null && logerror "One or more CVMFS repositories might not be completely unmounted" || loginfo "CVMFS repositories unmounted"
-
-"$error_gen" -ok "$(basename $0)" "umnt_msg3" "Glidein-based CVMFS unmount was successful."
+# searching for "/dev/fuse" or "cvmfs2" since "/cvmfs" might return false positives (/etc/auto.fs/cvmfs line)
+cat /proc/$$/mounts | grep ${search_pattern} &> /dev/null && logerror "One or more CVMFS repositories might not be completely unmounted" || loginfo "CVMFS repositories unmounted"
+"$error_gen" -ok "$(basename $0)" "umnt_msg1" "Glidein-based CVMFS unmount was successful."
 # returning 0 to indicate the unmount process was successful
-true
+exit 0
 
-########################################################################################################
+############################################################################
 # End: main program
-########################################################################################################
+############################################################################
