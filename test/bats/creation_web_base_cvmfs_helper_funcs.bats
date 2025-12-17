@@ -115,8 +115,7 @@ setup() {
     # when unpriv. user namespaces is not supported and disabled
     perform_system_check() { GWMS_IS_UNPRIV_USERNS_ENABLED=1; GWMS_IS_UNPRIV_USERNS_SUPPORTED=1; }
     run has_unpriv_userns
-    echo "MY OUTPUT: $output" >&3
-    [[ ${output} == "unavailable" ]] || false
+    [[ ${lines[1]} == "unavailable" ]] || false
     [ $status -eq 1 ]
 }
 
@@ -129,29 +128,34 @@ setup() {
 }
 
 @test "Test fuse configuration status 1" {
-    perform_system_check() { GWMS_IS_FUSE_INSTALLED=0; GWMS_IS_FUSERMOUNT=0; }
+    perform_system_check() { GWMS_IS_FUSE_INSTALLED=1; GWMS_IS_FUSERMOUNT=0; }
     run has_fuse
-    [[ $lines[1] == "yes" ]] || false
+    echo "GWMS_IS_FUSE_INSTALLED: $GWMS_IS_FUSE_INSTALLED" >&3
+    echo "GWMS_IS_FUSERMOUNT: $GWMS_IS_FUSERMOUNT" >&3
+    echo "MY OUTPUT IS: $output" >&3
+    [[ ${lines[1]} == "error" ]] || false
     [ $status -eq 0 ]
 }
 
 @test "Test fuse configuration status 2" {
     perform_system_check() { GWMS_IS_FUSE_INSTALLED=1; GWMS_IS_FUSERMOUNT=1; }
     run has_fuse
-    [[ $lines[1] == "no" ]] || false
+    echo "MY OUTPUT IS: $output" >&3
+    [[ ${lines[1]} == "no" ]] || false
     [ $status -eq 0 ]
 }
 
 @test "Test fuse configuration status 3" {
-    perform_system_check() { GWMS_IS_FUSE_INSTALLED=0; GWMS_IS_FUSERMOUNT=1; }
+    perform_system_check() { GWMS_IS_FUSE_INSTALLED=0; GWMS_IS_FUSERMOUNT=0; }
     run has_fuse
-    [[ $lines[1] == "error" ]] || false
+    [[ ${lines[1]} == "yes" ]] || false
     [ $status -eq 0 ]
 }
 
 @test "Test fuse configuration status 4" {
-    perform_system_check() { GWMS_IS_FUSE_INSTALLED=1; GWMS_IS_FUSERMOUNT=0; }
+    perform_system_check() { GWMS_IS_FUSE_INSTALLED=0; GWMS_IS_FUSERMOUNT=1; }
     run has_fuse
-    [[ $lines[1] == "error" ]] || false
+    echo "MY OUTPUT IS: $output" >&3
+    [[ ${lines[1]} == "error" ]] || false
     [ $status -eq 0 ]
 }
