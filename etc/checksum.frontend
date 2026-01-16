@@ -1,12 +1,11 @@
 ###################################################################
-# GLIDEINWMS_VERSION v3_11_3_rc2
+# GLIDEINWMS_VERSION v3_11_3_rcX
 ###################################################################
 78bb68217a24e977bdc5850e7d607960  ./__init__.py
 32b4bfc3e16d335b71c235d34a819eba  ./.codespell/ignore_lines.txt
 bf1869a9f0e22861757b16f54e1acee9  ./.codespell/ignore_words.txt
 07a95cd0756d25f95de6047b1a5222a5  ./.codespell/README.md
 9f56602cb12638b944332ca114507dc8  ./ACKNOWLEDGMENTS.md
-ba748ed3bc5995aee49b1067feaf7999  ./bigfiles/cvmfs_utils.tar.gz
 4558e767c3bea40c689e0c7eec0fd2ce  ./bigfiles/README.md
 1cbeca0f86e9f8e679f0cab69f6bf2fa  ./CHANGELOG.md
 bb583bf02b5f51b34e7be2efb3ddf43d  ./config/mailinglist.cfg
@@ -103,6 +102,7 @@ e6bf64a1f695fb4e8b860fc5f92b7946  ./creation/web_base/singularity_lib.sh
 1feebbec48bdd2edece16d9b9167a03c  ./creation/web_base/smart_partitionable.sh
 6391319a5eddce73d17ed4003eed439e  ./creation/web_base/update_proxy.py
 001104ac9050d95a870b0841d238723a  ./DEVELOPMENT.md
+0d274af8f7358761aa29fa4ae1c65db9  ./from513_glidein_startup.sh
 d41d8cd98f00b204e9800998ecf8427e  ./frontend/__init__.py
 86818837b83be4ba1ce16753c890fd3d  ./frontend/checkFrontend.py
 726e9234088e872f979bebcd5d4982e3  ./frontend/glideinFrontend.py
