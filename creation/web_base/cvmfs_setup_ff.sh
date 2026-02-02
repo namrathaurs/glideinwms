@@ -100,11 +100,10 @@ fi
 
 loginfo "GLIDEIN_USE_CVMFS: $use_cvmfs, GLIDEIN_CVMFS_REQUIRE: $glidein_cvmfs_require"
 loginfo "cvmfsexec mode $cvmfsexec_mode is being used..."
-# the following is run if cvmfsexec cannot be used in mode 3/2
 perform_cvmfs_mount $cvmfsexec_mode $glidein_cvmfs_require
 if [[ $? -eq 0 ]]; then
-    # the following is run if cvmfsexec can be used in mode 3/2
     if [[ $cvmfsexec_mode -eq 3 || $cvmfsexec_mode -eq 2 ]]; then
+        # the following is run if cvmfsexec can be used in mode 3/2
         # before exiting out of this block, do two things...
         # one, set a variable indicating this script has been executed once
         gwms_cvmfs_reexec="yes"
