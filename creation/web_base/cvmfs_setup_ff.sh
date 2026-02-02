@@ -27,12 +27,12 @@ add_config_line_source=$(grep -m1 '^ADD_CONFIG_LINE_SOURCE ' "$glidein_config" |
 # get the glidein work directory location from glidein_config file
 [[ -e "$glidein_config" ]] && error_gen=$(gconfig_get ERROR_GEN_PATH "$glidein_config")
 
-[[ -e "$glidein_config" ]] && work_dir=$(gconfig_get GLIDEIN_WORK_DIR "$1")
+[[ -e "$glidein_config" ]] && work_dir=$(gconfig_get GLIDEIN_WORK_DIR "$glidein_config")
 # shellcheck source=./cvmfs_helper_funcs_ff.sh
 . "$work_dir"/cvmfs_helper_funcs_ff.sh
 
 # get the use_cvmfs attribute value; passed as one of the frontend attributes
-use_cvmfs=$(gconfig_get GLIDEIN_USE_CVMFS "$1")
+use_cvmfs=$(gconfig_get GLIDEIN_USE_CVMFS "$glidein_config")
 if [[ -z $use_cvmfs ]]; then
     loginfo "CVMFS not requested (GLIDEIN_USE_CVMFS not used); skipping CVMFS setup."
     "$error_gen" -ok "$(basename $0)" "mnt_msg1" "CVMFS not requested; skipping setup."
