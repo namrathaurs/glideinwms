@@ -39,7 +39,7 @@ run_with_timeout() {
         timeout=0
     else
         timeout=$1
-	shift
+	    shift
     fi
     # Run in a subshell to avoid job control messages
     ( "$@" &
