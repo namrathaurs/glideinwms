@@ -6,47 +6,6 @@
 # This script generates cvmfsexec distributions for various cvmfs configurations
 # and supported machine types, as supported by the open-source cvmfsexec utility.
 
-## \brief Get all the machine types supported by cvmfsexec utility.
-## \param No parameters.
-## \returnval 0 if the supported machine types were obtained and cleanup of the temporary directory was successful, 1 if the supported machine types were obtained but cleanup of the temporary directory failed.
-# Check with Marco: is the return value necessary? since I'm not using the return value anywhere to determine the next course of action
-get_supported_machine_types() {
-    # checkout the latest version of cvmfsexec, as a snapshot, into a temporary location and fetch the most up-to-date list of supported platforms
-    temp_loc=$(mktemp -d)
-    if [[ ! -d "$temp_loc" ]]; then
-        error_handler "Failed to create temporary directory while listing supported platforms."
-        exit 1
-    fi
-    curl -sL "$CVMFSEXEC_ARCHIVE" | tar -xz -C $temp_loc --strip-components=1
-    supported_types=$("$temp_loc"/makedist -m xxx 2>&1 | grep -v "not supported" | tail -n +3)
-    echo "$supported_types"     # printing the supported platforms...
-
-    # after listing the supported types, clean up the temporary location that was created
-    if [[ -n "$temp_loc" && -d "$temp_loc" ]]; then
-        rm -rf "$temp_loc"
-        return 0
-    else
-        error_handler "Something went wrong while cleaning up!"
-        return 1
-    fi
-}
-
-## \brief Set the default list of machine types that is supported by this script.
-## \param No parameters.
-## \returnval No return value.
-set_default_machine_types() {
-    # first, get the machine types supported by the cvmfsexec utility
-    machine_types=$(get_supported_machine_types)
-    # then, process the output to have a comma-separated list of machine types
-    # converting the multi-line output to single line string
-    machine_types=${machine_types//$'\n'/ }
-    # trimming leading/trailing spaces in the single line string
-    machine_types=$(echo "$machine_types" | awk '$1=$1')
-    # replacing spaces with commas
-    machine_types=${machine_types// /,}
-    echo "$machine_types"
-}
-
 # Hardcoded variables
 # using the recommended URL format for legacy/custom repositories with master branch
 CVMFSEXEC_ARCHIVE="https://github.com/cvmfs/cvmfsexec/archive/master.tar.gz"
@@ -54,6 +13,15 @@ DEFAULT_WORK_DIR="/var/lib/gwms-factory/work-dir"
 # TODO: periodically verify DEFAULT_MACHINE_TYPES to ensure rhel, suse and other derivatives as supported by cvmfsexec are included in the list
 # NOTE: Although rhel9-x86_64 is supported, el7 tools might not work with el9 files (as suggested by Dave Dykstra) as of July 03, 2023
 DEFAULT_MACHINE_TYPES=$(set_default_machine_types)
+
+## \brief Prints ERROR level messages to the standard output along with the usage information for this script.
+## \param 1 parameter: string containing the error message to be printed.
+## \returnval No return value.
+error_handler() {
+	echo "ERROR: $1"
+	usage
+	exit 1
+}
 
 ## \brief Prints usage information for this script to the standard output.
 ## \param No parameters.
@@ -76,6 +44,46 @@ for which distributions is to be built. Can be empty, a single value or a
 comma-separated list of values from the options {rhel9-x86_64|rhel8-x86_64|rhel7-x86_64|suse15-x86_64|rhel8-aarch64|rhel8-ppc64le}.
 Use '$0 --list-platforms' for the most up-to-date list of all available platforms.
 EOF
+}
+
+## \brief Get all the machine types supported by cvmfsexec utility.
+## \param No parameters.
+## \returnval 0 if the supported machine types were obtained and cleanup of the temporary directory was successful, 1 if the supported machine types were obtained but cleanup of the temporary directory failed.
+get_supported_machine_types() {
+    # checkout the latest version of cvmfsexec, as a snapshot, into a temporary location and fetch the most up-to-date list of supported platforms
+    temp_loc=$(mktemp -d)
+    if [[ ! -d "$temp_loc" ]]; then
+        echo "Failed to create temporary directory while listing supported platforms."
+        exit 1
+    fi
+    curl -sL "$CVMFSEXEC_ARCHIVE" | tar -xz -C $temp_loc --strip-components=1
+    supported_types=$("$temp_loc"/makedist -m xxx 2>&1 | grep -v "not supported" | tail -n +3)
+    echo "$supported_types"     # printing the supported platforms...
+
+    # after listing the supported types, clean up the temporary location that was created
+    if [[ -n "$temp_loc" && -d "$temp_loc" ]]; then
+        rm -rf "$temp_loc"
+        return 0
+    else
+        echo "Something went wrong while cleaning up!"
+        return 1
+    fi
+}
+
+## \brief Set the default list of machine types that is supported by this script.
+## \param No parameters.
+## \returnval No return value.
+set_default_machine_types() {
+    # first, get the machine types supported by the cvmfsexec utility
+    machine_types=$(get_supported_machine_types)
+    # then, process the output to have a comma-separated list of machine types
+    # converting the multi-line output to single line string
+    machine_types=${machine_types//$'\n'/ }
+    # trimming leading/trailing spaces in the single line string
+    machine_types=$(echo "$machine_types" | awk '$1=$1')
+    # replacing spaces with commas
+    machine_types=${machine_types// /,}
+    echo "$machine_types"
 }
 
 ## \brief Checks whether the directory exists or not and proceeds to use the directory if it exists or creates one if the directory does not exist.
@@ -205,15 +213,6 @@ build_cvmfsexec_distros() {
 	fi
 
 	echo "Took $(($(date +%s)-start)) seconds to create $successful_builds cvmfsexec distribution(s)"
-}
-
-## \brief Prints ERROR level messages to the standard output along with the usage information for this script.
-## \param 1 parameter: string containing the error message to be printed.
-## \returnval No return value.
-error_handler() {
-	echo "ERROR: $1"
-	usage
-	exit 1
 }
 
 
