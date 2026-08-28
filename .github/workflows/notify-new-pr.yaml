@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: 2009 Fermi Research Alliance, LLC
+# SPDX-License-Identifier: Apache-2.0
+
+name: Notify Pull Request for Review on Slack
+on:
+  pull_request:
+    types: ready_for_review
+
+jobs:
+  notify_new_pr:
+    runs-on: ubuntu-latest
+    name: A job to send a Slack notification when a new pull request is opened
+    steps:
+      - name: Echo PR Info
+        shell: bash
+        run: |
+          PR_NUM="${{ github.event.pull_request.number }}"
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_HTML_URL="${{ github.event.pull_request.html_url }}"
+          echo "A new pull request has been opened! [${PR_TITLE}](${PR_HTML_URL})"
+      - name: Send Slack Notification
+        uses: actions/slack@v2.0.0
+        with:
+          color: "good"
+          # channel:
+          users: "@Namratha"
+          message: "A new pull request has been opened!\nTitle: ${{ github.event.pull_request.title }}\nLink: ${{ github.event.pull_request.html_url }}"
